@@ -168,26 +168,88 @@ if not filtered_df.empty:
     st.plotly_chart(fig, use_container_width=True)
 
 # ------------------------------
-# 🗺️ Map Visualization
+# 🗺️ Map Visualization (Always Show All Locations + Red-Green Scale + Rainfall Emojis)
 # ------------------------------
 st.subheader("🗺️ Microplastic Hotspot Map")
-valid_df = filtered_df.dropna(subset=["Latitude", "Longitude"])
-if not valid_df.empty:
+
+# Ensure numeric coordinates
+df["Latitude"] = pd.to_numeric(df["Latitude"], errors="coerce")
+df["Longitude"] = pd.to_numeric(df["Longitude"], errors="coerce")
+map_df = df.dropna(subset=["Latitude", "Longitude"]).copy()
+
+# 🌀 Add rainfall intensity emojis
+def get_rain_emoji(rain):
+    if pd.isna(rain):
+        return "❔ No Data"
+    elif rain < 5:
+        return "☀️ Low"
+    elif rain < 20:
+        return "🌦️ Moderate"
+    elif rain < 50:
+        return "🌧️ High"
+    else:
+        return "⛈️ Very High"
+
+if "Rainfall_mm" in map_df.columns:
+    map_df["Rainfall_Level"] = map_df["Rainfall_mm"].apply(get_rain_emoji)
+else:
+    map_df["Rainfall_Level"] = "No Data"
+
+# 🎯 Always show all points for context
+if "🌐 All Rivers" in selected_rivers or len(selected_rivers) == 0:
+    map_display_df = map_df.copy()
+else:
+    map_display_df = map_df.copy()
+    map_display_df["Highlight"] = map_display_df["River"].apply(lambda x: "Selected" if x in selected_rivers else "Other")
+
+if not map_display_df.empty:
     fig_map = px.scatter_mapbox(
-        valid_df,
-        lat="Latitude", lon="Longitude",
+        map_display_df,
+        lat="Latitude",
+        lon="Longitude",
         color="Microplastic_ppm",
         size="Microplastic_ppm",
         hover_name="Location",
-        hover_data=["River", "Microplastic_ppm", "Rainfall_mm"],
-        color_continuous_scale="Viridis",
-        zoom=4, height=500,
-        title="Microplastic Concentration by Location"
+        hover_data={
+            "River": True,
+            "Microplastic_ppm": True,
+            "Rainfall_mm": True,
+            "Rainfall_Level": True,
+            "Latitude": False,
+            "Longitude": False
+        },
+        color_continuous_scale="RdYlGn_r",  # 🔴 Red = High pollution → 🟢 Green = Low
+        zoom=4,
+        height=550,
+        title="🌍 Microplastic Concentration & Rainfall Impact Map"
     )
-    fig_map.update_layout(mapbox_style="open-street-map", paper_bgcolor="rgba(0,0,0,0)")
+
+    # Adaptive layout
+    fig_map.update_layout(
+        mapbox_style="carto-darkmatter" if theme_mode == "🌙 Dark Mode" else "open-street-map",
+        paper_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=10, r=10, t=60, b=10),
+        font=dict(color=text_color, size=14),
+        title_font=dict(size=20, color=accent_color)
+    )
+
+    # 🔴 Overlay selected rivers with red markers for emphasis
+    if "🌐 All Rivers" not in selected_rivers and len(selected_rivers) > 0:
+        selected_points = map_df[map_df["River"].isin(selected_rivers)]
+        if not selected_points.empty:
+            fig_map.add_trace(px.scatter_mapbox(
+                selected_points,
+                lat="Latitude",
+                lon="Longitude",
+                size="Microplastic_ppm",
+                hover_name="Location",
+                hover_data=["River", "Microplastic_ppm", "Rainfall_Level"],
+                color_discrete_sequence=["#ff0000"]
+            ).data[0])
+
     st.plotly_chart(fig_map, use_container_width=True)
 else:
-    st.warning("⚠️ No valid coordinates found for selected rivers.")
+    st.warning("⚠️ No valid coordinates found in dataset.")
 
 # ------------------------------
 # 🌧️ Rainfall Prediction (Enhanced)

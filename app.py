@@ -233,41 +233,74 @@ if not trend_df.empty:
     st.plotly_chart(fig_micro, use_container_width=True)
 else:
     st.info("No microplastic data available for the selected location.")
-
 # ------------------------------
-# 🌧️ Rainfall Insights & Prediction (Light Mode Only)
+# 🌧️ Rainfall Insights & Prediction (Light Mode Only, Location-Aware)
 # ------------------------------
-if "Rainfall_mm" in df.columns:
-    st.subheader("🌧️ Rainfall Insights & Prediction")
+st.subheader("🌧️ Rainfall Insights & Prediction")
 
-    rainfall_trend = (
-        filtered_df.groupby("DateTime")["Rainfall_mm"]
-        .mean()
-        .reset_index()
-        .sort_values("DateTime")
-    )
+# --- normalize column names
+df.columns = df.columns.str.strip().str.replace(" ", "_").str.replace("(", "").str.replace(")", "")
 
-    if not rainfall_trend.empty:
-        rainfall_trend["Predicted_Rainfall_mm"] = rainfall_trend["Rainfall_mm"].rolling(3, min_periods=1).mean() * 1.05
+rain_col = None
+for possible in ["Rainfall_mm", "rain_mm", "Rainfall", "rainfall_mm"]:
+    if possible in df.columns:
+        rain_col = possible
+        break
 
+if rain_col is None:
+    st.warning("⚠️ No rainfall column found in dataset.")
+else:
+    # make sure it's numeric
+    df[rain_col] = pd.to_numeric(df[rain_col], errors="coerce")
+
+    # select location for rainfall trends
+    available_locs = df["Location"].dropna().unique().tolist()
+    selected_loc_rain = st.selectbox("📍 Select Location for Rainfall Trend", ["🌍 All Locations"] + available_locs)
+
+    if selected_loc_rain != "🌍 All Locations":
+        rain_df = df[df["Location"] == selected_loc_rain]
+    else:
+        rain_df = df.copy()
+
+    rain_df["DateTime"] = pd.to_datetime(rain_df["DateTime"], errors="coerce")
+    rain_df = rain_df.dropna(subset=["DateTime", rain_col])
+    rain_df = rain_df.sort_values("DateTime")
+
+    # --- compute rolling prediction only if data exists
+    if not rain_df.empty and rain_df[rain_col].notna().any():
+        rain_df["Predicted_Rainfall_mm"] = (
+            rain_df[rain_col].rolling(3, min_periods=1).mean() * 1.05
+        )
+
+        # --- compute averages safely
+        avg_rain = rain_df[rain_col].mean(skipna=True)
+        if pd.isna(avg_rain):
+            avg_rain_text = "No data"
+        else:
+            avg_rain_text = f"{avg_rain:.2f} mm"
+
+        st.markdown(
+            f"<div class='metric-card'><h3>🌦️ Avg Rainfall ({selected_loc_rain})</h3><h2>{avg_rain_text}</h2></div>",
+            unsafe_allow_html=True,
+        )
+
+        # --- plot
         fig_rain = px.line(
-            rainfall_trend,
+            rain_df,
             x="DateTime",
-            y=["Rainfall_mm", "Predicted_Rainfall_mm"],
+            y=[rain_col, "Predicted_Rainfall_mm"],
             markers=True,
-            title="Rainfall Trend & Prediction",
+            title=f"Rainfall Trend & Prediction {'for ' + selected_loc_rain if selected_loc_rain != '🌍 All Locations' else '(All Locations)'}",
             color_discrete_sequence=["#0077b6", "#00b4d8"]
         )
         fig_rain.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
+            template="plotly_white",
+            paper_bgcolor="rgba(255,255,255,0.7)",
             plot_bgcolor="rgba(255,255,255,0.85)",
             font=dict(color="#002b36", size=14),
             title_font=dict(size=20, color="#0077b6"),
-            template="plotly_white"   # 👈 forces light background
+            margin=dict(l=20, r=20, t=50, b=20)
         )
         st.plotly_chart(fig_rain, use_container_width=True)
     else:
-        st.info("No rainfall data available to display trends.")
-
-    # Debug helper (optional)
-    # st.write("🧾 Debug: Rainfall data preview", rainfall_trend.head(10))
+        st.info("No valid rainfall data found to plot trend or prediction.")

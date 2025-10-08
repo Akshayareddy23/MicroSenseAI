@@ -100,18 +100,28 @@ for c in ["Latitude","Longitude"]:
 # ------------------------------
 # 🌍 River Selection (All + Multi-Select)
 # ------------------------------
+# 🌍 River Selection (All + Multi-Select)
+st.subheader("🌊 Select Rivers")
+
+# Get unique rivers
 river_list = sorted(df["River"].dropna().unique().tolist())
+
+# Add "All Rivers" option manually at top
 river_options = ["🌐 All Rivers"] + river_list
-selected = st.multiselect(
-    "🌊 Select Rivers (choose one or multiple — or 'All Rivers')",
+
+# Use multiselect widget
+selected_rivers = st.multiselect(
+    "Select one or more rivers to view data (or choose 🌐 All Rivers to show everything):",
     options=river_options,
     default=["🌐 All Rivers"]
 )
 
-if "🌐 All Rivers" in selected or not selected:
+# Logic to filter based on selection
+if "🌐 All Rivers" in selected_rivers or len(selected_rivers) == 0:
     filtered_df = df.copy()
 else:
-    filtered_df = df[df["River"].isin(selected)]
+    filtered_df = df[df["River"].isin(selected_rivers)]
+
 
 # ------------------------------
 # 📈 Key Stats

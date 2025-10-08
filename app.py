@@ -1,5 +1,5 @@
 # ------------------------------
-# 🌊 IMPORTS (all at the top)
+# 🌊 IMPORTS
 # ------------------------------
 import streamlit as st
 import pandas as pd
@@ -7,7 +7,6 @@ import plotly.express as px
 import numpy as np
 import gspread
 from google.oauth2.service_account import Credentials
-from oauth2client.service_account import ServiceAccountCredentials
 import cv2
 import tempfile
 from PIL import Image
@@ -15,10 +14,10 @@ import os
 from datetime import datetime
 
 # ------------------------------
-# 🔑 Google Sheets Connection
+# 🔑 GOOGLE SHEETS CONNECTION
 # ------------------------------
 def connect_to_sheets(sheet_name):
-    scopes = ["https://spreadsheets.google.com/feeds",
+    scopes = ["https://www.googleapis.com/auth/spreadsheets",
               "https://www.googleapis.com/auth/drive"]
 
     creds = Credentials.from_service_account_file(
@@ -33,13 +32,14 @@ def add_new_reading(sheet, river, location, microplastic_ppm, rainfall_mm):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sheet.append_row([now, river, location, microplastic_ppm, rainfall_mm])
 
+
 # ------------------------------
-# 🌊 Page Configuration
+# 🌊 PAGE CONFIG
 # ------------------------------
 st.set_page_config(page_title="MicroSense AI", page_icon="🌊", layout="wide")
 
 # ------------------------------
-# 💦 Full Water Background (Video)
+# 💦 FULL WATER BACKGROUND
 # ------------------------------
 video_bg = """
 <video autoplay muted loop id="bgvid" style="
@@ -57,7 +57,7 @@ opacity: 0.7;">
 st.markdown(video_bg, unsafe_allow_html=True)
 
 # ------------------------------
-# 🎨 Styling
+# 🎨 STYLE
 # ------------------------------
 st.markdown("""
 <style>
@@ -89,13 +89,13 @@ footer {visibility: hidden;}
 """, unsafe_allow_html=True)
 
 # ------------------------------
-# 🌊 Header
+# 🌊 HEADER
 # ------------------------------
-st.title("🌊 MicroSense AI: Real-Time Microplastic Detection Dashboard")
-st.caption("Empowering clean rivers through live microplastic monitoring & rainfall insights")
+st.title("🌊 MicroSense AI: Intelligent River Health Dashboard")
+st.caption("Empowering clean rivers through AI-driven microplastic detection and rainfall tracking")
 
 # ------------------------------
-# 📊 Load Data from Google Sheets
+# 📊 LOAD DATA FROM GOOGLE SHEETS
 # ------------------------------
 data_sheet_id = "1f_U67643pkM5JK_KgN0BU1gqL_EMz6v1"  # Data + Rainfall
 coord_sheet_id = "10K6rwt6BDcBzbmV2JSAc2wJH5SdLLH-LGiYthV9OMKw"  # Coordinates
@@ -116,7 +116,7 @@ except Exception as e:
 df = pd.merge(df_data, df_coords, on=["River", "Location"], how="left")
 
 # ------------------------------
-# 🧭 Data Cleaning
+# 🧭 DATA CLEANING
 # ------------------------------
 for col in ["Latitude", "Longitude", "Microplastic_ppm"]:
     if col not in df.columns:
@@ -130,7 +130,7 @@ if "Rainfall_mm" in df.columns:
     df["Rainfall_mm"] = pd.to_numeric(df["Rainfall_mm"], errors="coerce")
 
 # ------------------------------
-# 🌍 River Selection
+# 🌍 RIVER SELECTION
 # ------------------------------
 st.subheader("🌊 Select Rivers")
 river_list = sorted(df["River"].dropna().unique().tolist())
@@ -145,7 +145,7 @@ selected_rivers = st.multiselect(
 filtered_df = df if "🌐 All Rivers" in selected_rivers else df[df["River"].isin(selected_rivers)]
 
 # ------------------------------
-# 📈 Key Stats
+# 📈 KEY STATS
 # ------------------------------
 if not filtered_df.empty:
     avg_micro = filtered_df["Microplastic_ppm"].mean()
@@ -161,13 +161,13 @@ if not filtered_df.empty:
     c3.markdown(f"<div class='metric-card'><h3>📅 Last Updated</h3><h2>{last_update.strftime('%H:%M, %b %d')}</h2></div>", unsafe_allow_html=True)
 
 # ------------------------------
-# 📋 Data Table
+# 📋 DATA TABLE
 # ------------------------------
 st.subheader("📊 Recent Readings")
 st.dataframe(filtered_df.tail(10), use_container_width=True)
 
 # ------------------------------
-# 🗺️ Map Visualization
+# 🗺️ MAP VISUALIZATION
 # ------------------------------
 st.subheader("🗺️ Microplastic Hotspot Map")
 
@@ -199,7 +199,7 @@ else:
     st.warning("⚠️ No valid location data available to plot map.")
 
 # ------------------------------
-# 📈 Microplastic Trend
+# 📈 MICROPLASTIC TREND
 # ------------------------------
 st.subheader("📈 Microplastic Trend Over Time")
 
@@ -225,7 +225,7 @@ else:
     st.info("No microplastic data available for the selected location.")
 
 # ------------------------------
-# 🌧️ Rainfall Trend
+# 🌧️ RAINFALL TREND
 # ------------------------------
 if "Rainfall_mm" in filtered_df.columns:
     st.subheader("🌧️ Rainfall Trend Over Time")
@@ -264,10 +264,11 @@ def analyze_microplastics(image_path):
 
 def push_to_existing_sheet(river, location, micro_ppm, lat, lon):
     try:
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        creds = Credentials.from_service_account_file("microsense-service-key.json", scopes=scopes)
         client = gspread.authorize(creds)
 
+        # 🔹 use your existing Google Sheet key here
         sheet = client.open_by_key("10K6rwt6BDcBzbmV2JSAc2wJH5SdLLH-LGiYthV9OMKw").sheet1
 
         sheet.append_row([

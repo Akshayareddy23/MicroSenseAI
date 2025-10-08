@@ -2,8 +2,9 @@ streamlit
 pandas
 plotly
 numpy
-geopandas
+opencv-python
+pillow
 gspread
 google-auth
-
-
+google-auth-oauthlib
+google-auth-httplib2

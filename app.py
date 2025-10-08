@@ -191,28 +191,34 @@ fig_map.update_layout(
 )
 st.plotly_chart(fig_map, use_container_width=True)
 # ------------------------------
-# 📈 Microplastic Trend Over Time (Light Mode)
+# 📈 Microplastic Trend Over Time (Light Mode + Location Filter)
 # ------------------------------
 st.subheader("📈 Microplastic Trend Over Time")
 
-# Ensure DateTime and Microplastic_ppm are valid
-if "DateTime" in df.columns:
-    df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
+# Filter locations based on selected rivers
+available_locations = filtered_df["Location"].dropna().unique().tolist()
+selected_location = st.selectbox("📍 Select a Location", options=["🌍 All Locations"] + available_locations)
+
+# Apply location filtering
+if selected_location != "🌍 All Locations":
+    trend_df = filtered_df[filtered_df["Location"] == selected_location]
 else:
-    st.warning("⚠️ No DateTime column found. Using current timestamps as fallback.")
-    df["DateTime"] = pd.Timestamp.now()
+    trend_df = filtered_df.copy()
 
-df["Microplastic_ppm"] = pd.to_numeric(df["Microplastic_ppm"], errors="coerce")
-filtered_df = df.dropna(subset=["DateTime", "Microplastic_ppm"])
+# Ensure proper datatypes
+trend_df["DateTime"] = pd.to_datetime(trend_df["DateTime"], errors="coerce")
+trend_df["Microplastic_ppm"] = pd.to_numeric(trend_df["Microplastic_ppm"], errors="coerce")
+trend_df = trend_df.dropna(subset=["DateTime", "Microplastic_ppm"])
 
-if not filtered_df.empty:
+if not trend_df.empty:
+    # Create time trend plot
     fig_micro = px.line(
-        filtered_df,
+        trend_df,
         x="DateTime",
         y="Microplastic_ppm",
         color="River",
         markers=True,
-        title="Microplastic Levels Over Time",
+        title=f"Microplastic Levels Over Time {'for ' + selected_location if selected_location != '🌍 All Locations' else '(All Locations)'}",
         color_discrete_sequence=px.colors.qualitative.Vivid
     )
     fig_micro.update_layout(
@@ -226,8 +232,7 @@ if not filtered_df.empty:
     )
     st.plotly_chart(fig_micro, use_container_width=True)
 else:
-    st.info("No microplastic data available for selected rivers.")
-
+    st.info("No microplastic data available for the selected location.")
 
 # ------------------------------
 # 🌧️ Rainfall Insights & Prediction (Light Mode Only)

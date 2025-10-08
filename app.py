@@ -227,7 +227,6 @@ if "Rainfall_mm" in filtered_df.columns:
         st.plotly_chart(fig_rain, use_container_width=True)
     else:
         st.info("No rainfall data available for the selected location.")
-
 # ------------------------------------------------
 # 📸 Live Image Monitoring
 # ------------------------------------------------
@@ -237,28 +236,42 @@ st.caption("Upload a water sample image to detect microplastics and log results 
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
 def analyze_microplastics(image_path):
-    """Basic simulated AI analysis of microplastic count"""
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    blur = cv2.GaussianBlur(img, (5, 5), 0)
-    _, thresh = cv2.threshold(blur, 127, 255, cv2.THRESH_BINARY_INV)
-    count = cv2.countNonZero(thresh) // 100
-    ppm = round(min(100, count / 10), 2)
-    return count, ppm
+    try:
+        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            raise ValueError("Image not read correctly (cv2 returned None)")
+
+        blur = cv2.GaussianBlur(img, (5, 5), 0)
+        _, thresh = cv2.threshold(blur, 127, 255, cv2.THRESH_BINARY_INV)
+        count = cv2.countNonZero(thresh) // 100  # arbitrary scaling
+        ppm = round(min(100, count / 10), 2)
+        return count, ppm
+    except Exception as e:
+        st.error(f"⚠️ Error analyzing image: {e}")
+        return 0, 0
 
 if uploaded_file is not None:
+    # Display the image
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Sample", use_container_width=True)
 
+    # Save to a temporary file for OpenCV to process
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-        image.save(tmp.name)
+        image.save(tmp.name, format="JPEG")
         img_path = tmp.name
 
-    with st.spinner("Analyzing microplastics... 🔬"):
+    # Run analysis
+    with st.spinner("🔬 Analyzing microplastics..."):
         count, ppm = analyze_microplastics(img_path)
 
-    st.success(f"Detected approximately {count} microplastic particles")
-    st.metric("Estimated Concentration", f"{ppm} ppm")
+    # Show results
+    if count > 0:
+        st.success(f"✅ Detected approximately **{count} microplastic particles**")
+        st.metric("Estimated Concentration", f"{ppm} ppm")
+    else:
+        st.warning("⚠️ No microplastics detected or image unreadable.")
 
+    # Input metadata for saving
     river_name = st.text_input("🌊 River Name", value="Simulated River")
     location_name = st.text_input("📍 Location", value="Virtual Station")
 
@@ -272,20 +285,17 @@ if uploaded_file is not None:
             )
             client = gspread.authorize(creds)
 
-            # ✅ Open the Google Sheet by name
-            sheet = client.open("simulated_readings.csv").sheet1
-
-            # ✅ Append a new row
+            # ✅ Use your actual Google Sheet ID here
+            sheet = client.open_by_key("YOUR_SHEET_ID_HERE").sheet1
             sheet.append_row([
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 river_name,
                 location_name,
                 ppm
             ])
-
-            st.success("✅ Data successfully saved to Google Sheet!")
+            st.success("✅ Result saved to Google Sheet successfully!")
         except Exception as e:
             st.error(f"❌ Google Sheets connection failed: {e}")
-
         finally:
-            os.remove(img_path)
+            if os.path.exists(img_path):
+                os.remove(img_path)

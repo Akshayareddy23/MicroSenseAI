@@ -208,24 +208,29 @@ elif page == "🌧️ Rainfall Insights":
         st.plotly_chart(fig_rain, use_container_width=True)
     else:
         st.info("No rainfall data available for this location.")
-
-# ------------------------------
 # 📊 CORRELATION PAGE
-# ------------------------------
 elif page == "📊 Correlation Analysis":
     st.header("💧 Rainfall vs Microplastic Correlation")
     corr_df = filtered_df.dropna(subset=["Microplastic_ppm", "Rainfall_mm"])
+
     if not corr_df.empty:
         fig_corr = px.scatter(
             corr_df,
             x="Rainfall_mm",
             y="Microplastic_ppm",
             color="River",
-            trendline="ols",
             title="Rainfall vs Microplastic Concentration",
-            color_discrete_sequence=px.colors.qualitative.Bold
+            color_continuous_scale="turbo",
+            color_discrete_sequence=px.colors.sequential.Tealgrn_r,
+            opacity=0.8
         )
-        fig_corr.update_layout(template="plotly_white", title_font=dict(size=20, color="#004b6b"))
+        fig_corr.update_layout(
+            template="plotly_dark",
+            plot_bgcolor="rgba(0,0,0,0.7)",
+            paper_bgcolor="rgba(0,0,0,0.7)",
+            font=dict(color="#cbe6f3"),
+            title_font=dict(size=20, color="#00e0ff"),
+        )
         st.plotly_chart(fig_corr, use_container_width=True)
     else:
         st.info("Not enough data for correlation analysis.")

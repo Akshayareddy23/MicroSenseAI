@@ -78,11 +78,13 @@ st.caption("Empowering clean rivers through live microplastic monitoring & rainf
 # ------------------------------
 data_sheet_id = "1f_U67643pkM5JK_KgN0BU1gqL_EMz6v1"
 coord_sheet_id = "10K6rwt6BDcBzbmV2JSAc2wJH5SdLLH-LGiYthV9OMKw"
+rainfall_sheet_id = "1nRF6Tf6ZorBdEtU-fvV0Cyjv1Ts1LlL8"  # Your rainfall sheet
 
 try:
     df_data = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{data_sheet_id}/export?format=csv")
     df_coords = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{coord_sheet_id}/export?format=csv")
-    st.success("✅ Live data loaded successfully from Google Sheets!")
+    df_rain = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{rainfall_sheet_id}/export?format=csv")
+    st.success("✅ Live data loaded successfully from all Google Sheets!")
 except Exception as e:
     st.error(f"❌ Could not load Google Sheet data.\nError: {e}")
     st.stop()
@@ -93,35 +95,33 @@ if "DateTime" in df.columns:
     df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
 else:
     df["DateTime"] = datetime.now()
+
 for c in ["Latitude","Longitude"]:
     if c in df.columns:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
+# Merge rainfall data (if it shares River + Location)
+if "River" in df_rain.columns and "Location" in df_rain.columns:
+    df = pd.merge(df, df_rain, on=["River","Location"], how="left")
+
 # ------------------------------
 # 🌍 River Selection (All + Multi-Select)
 # ------------------------------
-# 🌍 River Selection (All + Multi-Select)
 st.subheader("🌊 Select Rivers")
 
-# Get unique rivers
 river_list = sorted(df["River"].dropna().unique().tolist())
-
-# Add "All Rivers" option manually at top
 river_options = ["🌐 All Rivers"] + river_list
 
-# Use multiselect widget
 selected_rivers = st.multiselect(
     "Select one or more rivers to view data (or choose 🌐 All Rivers to show everything):",
     options=river_options,
     default=["🌐 All Rivers"]
 )
 
-# Logic to filter based on selection
 if "🌐 All Rivers" in selected_rivers or len(selected_rivers) == 0:
     filtered_df = df.copy()
 else:
     filtered_df = df[df["River"].isin(selected_rivers)]
-
 
 # ------------------------------
 # 📈 Key Stats
@@ -131,9 +131,9 @@ if not filtered_df.empty:
     avg_rain = filtered_df["Rainfall_mm"].mean() if "Rainfall_mm" in filtered_df else None
     last_update = filtered_df["DateTime"].max()
 
-    c1,c2,c3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
     c1.markdown(f"<div class='metric-card'><h3>💧 Avg Microplastic</h3><h2>{avg_micro:.2f} ppm</h2></div>", unsafe_allow_html=True)
-    if avg_rain is not None:
+    if avg_rain is not None and not pd.isna(avg_rain):
         c2.markdown(f"<div class='metric-card'><h3>🌦️ Avg Rainfall</h3><h2>{avg_rain:.2f} mm</h2></div>", unsafe_allow_html=True)
     c3.markdown(f"<div class='metric-card'><h3>📅 Last Updated</h3><h2>{last_update.strftime('%H:%M, %b %d')}</h2></div>", unsafe_allow_html=True)
 
@@ -191,9 +191,10 @@ else:
 # 🌧️ Rainfall Prediction
 # ------------------------------
 if "Rainfall_mm" in df.columns:
-    st.subheader("🌦️ Rainfall Prediction (Based on Past Trends)")
+    st.subheader("🌦️ Rainfall Trends & Prediction")
     rainfall_avg = filtered_df.groupby("Location", dropna=True)["Rainfall_mm"].mean().reset_index()
     rainfall_avg["Predicted_Rainfall_mm"] = rainfall_avg["Rainfall_mm"] * 1.1
+
     if not rainfall_avg.empty:
         fig_rain = px.bar(
             rainfall_avg,
@@ -206,6 +207,7 @@ if "Rainfall_mm" in df.columns:
         fig_rain.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color=text_color,size=14)
+            font=dict(color=text_color,size=14),
+            title_font=dict(size=20,color=accent_color)
         )
         st.plotly_chart(fig_rain, use_container_width=True)

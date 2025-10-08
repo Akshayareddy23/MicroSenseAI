@@ -130,18 +130,19 @@ st.subheader("🗺️ Microplastic Hotspot Map")
 
 if "Latitude" in df.columns and "Longitude" in df.columns:
     fig_map = px.scatter_mapbox(
-        df,
-        lat="Latitude",
-        lon="Longitude",
-        color="Microplastic_ppm",
-        size="Microplastic_ppm",
-        hover_name="Location",
-        hover_data=["River", "Rainfall_mm"],
-        color_continuous_scale="RdYlGn_r",
-        zoom=4,
-        height=500,
-        title="Microplastic Concentration by Location"
-    )
+    df,
+    lat="Latitude",
+    lon="Longitude",
+    color="Microplastic_ppm",
+    size="Microplastic_ppm",
+    hover_name="Location",
+    hover_data=["River", "Rainfall_mm"],
+    color_continuous_scale="RdYlGn_r",
+    zoom=4,
+    height=500,
+    title="Microplastic Concentration by Location"
+)
+
     fig_map.update_layout(mapbox_style="open-street-map")
     st.plotly_chart(fig_map, use_container_width=True)
 else:

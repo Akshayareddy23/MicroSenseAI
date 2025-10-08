@@ -12,25 +12,44 @@ st.title("🌊 MicroSense AI: Real-Time Microplastic Detection Dashboard")
 # ------------------------------
 # 📊 Load Data from Google Sheets
 # ------------------------------
-# Replace with your actual Google Sheet ID
-sheet_id = "1f_U67643pkM5JK_KgN0BU1gqL_EMz6v1"
-csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+
+# Main data sheet (microplastic readings)
+data_sheet_id = "1f_U67643pkM5JK_KgN0BU1gqL_EMz6v1"
+data_csv_url = f"https://docs.google.com/spreadsheets/d/{data_sheet_id}/export?format=csv"
+
+# Coordinates sheet (river locations)
+coord_sheet_id = "10K6rwt6BDcBzbmV2JSAc2wJH5SdLLH-LGiYthV9OMKw"
+coord_csv_url = f"https://docs.google.com/spreadsheets/d/{coord_sheet_id}/export?format=csv"
 
 try:
-    df = pd.read_csv(csv_url)
-    st.success("✅ Data loaded successfully from Google Sheets!")
+    df_data = pd.read_csv(data_csv_url)
+    df_coords = pd.read_csv(coord_csv_url)
+    st.success("✅ Data and coordinates loaded successfully!")
 except Exception as e:
-    st.warning("⚠️ Could not load data from Google Sheets. Using default sample data.")
-    df = pd.DataFrame({
+    st.warning(f"⚠️ Could not load data from Google Sheets. Using sample data.\nError: {e}")
+    df_data = pd.DataFrame({
         "DateTime": ["2025-10-07 08:00", "2025-10-07 09:00", "2025-10-07 10:00"],
         "River": ["Ganga", "Ganga", "Ganga"],
         "Location": ["Varanasi", "Varanasi", "Varanasi"],
         "Rainfall_mm": [5, 6, 3],
         "Microplastic_ppm": [8, 9, 10],
     })
+    df_coords = pd.DataFrame({
+        "River": ["Ganga"],
+        "Location": ["Varanasi"],
+        "Latitude": [25.3176],
+        "Longitude": [82.9739]
+    })
+
+# Merge main data with coordinates (on River and Location)
+df = pd.merge(df_data, df_coords, on=["River", "Location"], how="left")
 
 # Ensure DateTime is proper datetime type
-df["DateTime"] = pd.to_datetime(df["DateTime"], errors='coerce')
+if "DateTime" in df.columns:
+    df["DateTime"] = pd.to_datetime(df["DateTime"], errors='coerce')
+else:
+    st.warning("⚠️ No 'DateTime' column found in your sheet. Using current timestamp.")
+    df["DateTime"] = datetime.now()
 
 # Store in session_state so user can add readings
 if "data" not in st.session_state:
@@ -92,9 +111,7 @@ if not filtered_df.empty:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # ------------------------------
-    # 🚨 Alerts Based on Latest Value
-    # ------------------------------
+    # Alerts
     latest_value = filtered_df["Microplastic_ppm"].iloc[-1]
     st.markdown("### 🔔 Contamination Status:")
     if latest_value < 5:
@@ -105,10 +122,12 @@ if not filtered_df.empty:
         st.error("🚨 High contamination detected! Immediate action required.")
 else:
     st.info("No data available for the selected river.")
+
+# ------------------------------
 # 🌍 Map Visualization
+# ------------------------------
 st.subheader("🗺️ Microplastic Hotspot Map")
 
-# Ensure coordinates exist
 if "Latitude" in df.columns and "Longitude" in df.columns:
     fig_map = px.scatter_mapbox(
         df,
@@ -127,13 +146,13 @@ if "Latitude" in df.columns and "Longitude" in df.columns:
     st.plotly_chart(fig_map, use_container_width=True)
 else:
     st.warning("⚠️ Coordinates (Latitude, Longitude) missing in your data.")
+
+# ------------------------------
 # 🌧️ Simple Rainfall Prediction (Demo)
+# ------------------------------
 st.subheader("🌦️ Rainfall Prediction")
 
-# Group by location and take average
 rainfall_avg = df.groupby("Location")["Rainfall_mm"].mean().reset_index()
-
-# Add mock predictions (increasing trend)
 rainfall_avg["Predicted_Rainfall_mm"] = rainfall_avg["Rainfall_mm"] * 1.1
 
 st.dataframe(rainfall_avg)

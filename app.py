@@ -25,59 +25,79 @@ z-index:-1; object-fit:cover; opacity:0.6;">
 # ------------------------------
 st.markdown("""
 <style>
-/* 🌊 GLOBAL BACKGROUND FIX */
+/* 🌊 GLOBAL BACKGROUND */
 body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
   background: transparent !important;
   color: #e6faff;
   font-family: 'Poppins', sans-serif;
 }
 
-/* 🌊 MAIN HEADER */
+/* 🌟 MAIN TITLE */
 .main > div:first-child h1 {
-  color: #00e0ff;
+  color: #00b8ff; /* Deep aqua */
   text-align: center;
-  font-size: 2.8rem;
-  font-weight: 900;
-  text-shadow: 0px 0px 20px rgba(0, 224, 255, 0.9);
+  font-size: 3rem;
+  font-weight: 1000;
   letter-spacing: 1px;
+  text-transform: uppercase;
+  text-shadow: 0px 0px 25px rgba(0, 180, 255, 0.9),
+               0px 0px 45px rgba(0, 120, 255, 0.6);
 }
 
-/* ✨ SUBHEADER (caption) */
+/* 💬 SUBTITLE / CAPTION */
 .main > div:first-child p {
-  color: #b3ecff;
+  color: #e0f7ff;
   text-align: center;
   font-size: 1.1rem;
-  text-shadow: 0px 0px 8px rgba(0, 0, 0, 0.7);
+  font-weight: 500;
+  text-shadow: 0px 0px 15px rgba(0,0,0,0.6);
+}
+
+/* 📘 SECTION HEADINGS */
+h2, h3, h4 {
+  color: #0077ff; /* Rich blue */
+  font-weight: 900;
+  text-shadow: 0px 0px 10px rgba(0, 100, 255, 0.6);
+  border-left: 6px solid #00b8ff;
+  padding-left: 10px;
 }
 
 /* 📊 METRIC CARDS */
 .metric-card {
-  background: rgba(0, 40, 70, 0.75);
+  background: rgba(0, 45, 80, 0.8);
   padding: 1.4rem;
   border-radius: 1.2rem;
-  box-shadow: 0 0 25px rgba(0, 224, 255, 0.25);
+  box-shadow: 0 0 30px rgba(0, 200, 255, 0.4);
   text-align: center;
   color: #e6faff;
-  backdrop-filter: blur(15px);
+  backdrop-filter: blur(12px);
   transition: all 0.3s ease-in-out;
 }
 .metric-card:hover {
   transform: scale(1.03);
-  box-shadow: 0 0 35px rgba(0, 224, 255, 0.5);
+  box-shadow: 0 0 45px rgba(0, 220, 255, 0.6);
 }
 
-/* ✅ SUCCESS + WARNING BOXES */
+/* ✅ ALERT BOXES */
 .stAlert {
-  background-color: rgba(0, 100, 120, 0.8) !important;
-  border: 1px solid rgba(0, 224, 255, 0.5);
+  background-color: rgba(0, 70, 100, 0.85) !important;
+  border: 2px solid rgba(0, 200, 255, 0.6);
   color: #dffeff !important;
+  font-weight: 600;
 }
 
-/* HIDE FOOTER + EXCESS PADDING */
+/* 🧭 SIDEBAR (optional) */
+[data-testid="stSidebar"] {
+  background: rgba(0, 30, 50, 0.9) !important;
+  color: #e6faff !important;
+}
+
+/* 🚫 FOOTER */
 footer {visibility: hidden;}
 section.main > div {padding-top: 0rem;}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # ------------------------------

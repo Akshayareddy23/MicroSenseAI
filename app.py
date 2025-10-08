@@ -26,6 +26,18 @@ opacity: 0.7;">
 """
 st.markdown(video_bg, unsafe_allow_html=True)
 
+# 🌊 Add water video background (full screen)
+video_bg = """
+<video autoplay muted loop id="bgvid" style="
+position: fixed; right:0; bottom:0;
+min-width:100%; min-height:100%;
+z-index:-1; object-fit:cover;">
+<source src="https://cdn.pixabay.com/vimeo/397868884/waves-33833.mp4?width=1280&hash=0c8dbcd40279279f514de7b548b6162f6b1a45cf" type="video/mp4">
+</video>
+"""
+st.markdown(video_bg, unsafe_allow_html=True)
+
+
 # ------------------------------
 # 🎨 Light Theme Styling
 # ------------------------------
@@ -180,7 +192,7 @@ fig_map.update_layout(
 st.plotly_chart(fig_map, use_container_width=True)
 
 # ------------------------------
-# 🌧️ Rainfall Insights
+# 🌧️ Rainfall Insights & Prediction (Light Mode Only)
 # ------------------------------
 if "Rainfall_mm" in df.columns:
     st.subheader("🌧️ Rainfall Insights & Prediction")
@@ -205,8 +217,14 @@ if "Rainfall_mm" in df.columns:
         )
         fig_rain.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(255,255,255,0.85)",
             font=dict(color="#002b36", size=14),
-            title_font=dict(size=20, color="#0077b6")
+            title_font=dict(size=20, color="#0077b6"),
+            template="plotly_white"   # 👈 forces light background
         )
         st.plotly_chart(fig_rain, use_container_width=True)
+    else:
+        st.info("No rainfall data available to display trends.")
+
+    # Debug helper (optional)
+    # st.write("🧾 Debug: Rainfall data preview", rainfall_trend.head(10))

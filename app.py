@@ -25,33 +25,60 @@ z-index:-1; object-fit:cover; opacity:0.6;">
 # ------------------------------
 st.markdown("""
 <style>
-body {
-  color: #002b36;
-  font-family: 'Segoe UI', sans-serif;
+/* 🌊 GLOBAL BACKGROUND FIX */
+body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+  background: transparent !important;
+  color: #e6faff;
+  font-family: 'Poppins', sans-serif;
 }
-[data-testid="stAppViewContainer"] {
-  background-color: rgba(255,255,255,0.75);
-  backdrop-filter: blur(6px);
-}
+
+/* 🌊 MAIN HEADER */
 .main > div:first-child h1 {
-  color: #004b6b;
+  color: #00e0ff;
   text-align: center;
   font-size: 2.8rem;
-  font-weight: 800;
-  text-shadow: 0px 0px 10px rgba(0,0,0,0.3);
+  font-weight: 900;
+  text-shadow: 0px 0px 20px rgba(0, 224, 255, 0.9);
+  letter-spacing: 1px;
 }
-.metric-card {
-  background: linear-gradient(135deg, rgba(202,240,248,0.85), rgba(144,224,239,0.85));
-  padding: 1.2rem;
-  border-radius: 1rem;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+
+/* ✨ SUBHEADER (caption) */
+.main > div:first-child p {
+  color: #b3ecff;
   text-align: center;
-  transition: all 0.3s ease;
+  font-size: 1.1rem;
+  text-shadow: 0px 0px 8px rgba(0, 0, 0, 0.7);
 }
-.metric-card:hover { transform: scale(1.03); }
+
+/* 📊 METRIC CARDS */
+.metric-card {
+  background: rgba(0, 40, 70, 0.75);
+  padding: 1.4rem;
+  border-radius: 1.2rem;
+  box-shadow: 0 0 25px rgba(0, 224, 255, 0.25);
+  text-align: center;
+  color: #e6faff;
+  backdrop-filter: blur(15px);
+  transition: all 0.3s ease-in-out;
+}
+.metric-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 35px rgba(0, 224, 255, 0.5);
+}
+
+/* ✅ SUCCESS + WARNING BOXES */
+.stAlert {
+  background-color: rgba(0, 100, 120, 0.8) !important;
+  border: 1px solid rgba(0, 224, 255, 0.5);
+  color: #dffeff !important;
+}
+
+/* HIDE FOOTER + EXCESS PADDING */
 footer {visibility: hidden;}
+section.main > div {padding-top: 0rem;}
 </style>
 """, unsafe_allow_html=True)
+
 
 # ------------------------------
 # 🧭 SIDEBAR NAVIGATION

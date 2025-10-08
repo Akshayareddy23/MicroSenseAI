@@ -28,98 +28,73 @@ st.markdown("""
 /* 🌊 GLOBAL BACKGROUND */
 body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
   background: transparent !important;
-  color: #e6faff;
+  color: #000000;  /* black text */
   font-family: 'Poppins', sans-serif;
 }
 
-/* 🌟 MAIN TITLE */
+/* 🏁 MAIN TITLE */
 .main > div:first-child h1 {
-  color: #00b8ff; /* Deep aqua */
+  color: #000000; /* black */
   text-align: center;
   font-size: 3rem;
-  font-weight: 1000;
+  font-weight: 900;
   letter-spacing: 1px;
   text-transform: uppercase;
-  text-shadow: 0px 0px 25px rgba(0, 180, 255, 0.9),
-               0px 0px 45px rgba(0, 120, 255, 0.6);
+  text-shadow: 2px 2px 6px rgba(255,255,255,0.5);
 }
 
 /* 💬 SUBTITLE / CAPTION */
 .main > div:first-child p {
-  color: #e0f7ff;
+  color: #1a1a1a;  /* dark gray for readability */
   text-align: center;
   font-size: 1.1rem;
   font-weight: 500;
-  text-shadow: 0px 0px 15px rgba(0,0,0,0.6);
+  text-shadow: 1px 1px 3px rgba(255,255,255,0.6);
 }
 
-/* 📘 SECTION HEADINGS */
+/* 🧭 SECTION HEADINGS */
 h2, h3, h4 {
-  color: #0077ff; /* Rich blue */
+  color: #000000; /* pure black */
   font-weight: 900;
-  text-shadow: 0px 0px 10px rgba(0, 100, 255, 0.6);
-  border-left: 6px solid #00b8ff;
+  text-shadow: 1px 1px 4px rgba(255,255,255,0.6);
+  border-left: 6px solid #000000;
   padding-left: 10px;
 }
 
 /* 📊 METRIC CARDS */
 .metric-card {
-  background: rgba(0, 45, 80, 0.8);
+  background: rgba(255, 255, 255, 0.85);
   padding: 1.4rem;
   border-radius: 1.2rem;
-  box-shadow: 0 0 30px rgba(0, 200, 255, 0.4);
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.3);
   text-align: center;
-  color: #e6faff;
-  backdrop-filter: blur(12px);
+  color: #000000;
+  backdrop-filter: blur(10px);
   transition: all 0.3s ease-in-out;
 }
 .metric-card:hover {
   transform: scale(1.03);
-  box-shadow: 0 0 45px rgba(0, 220, 255, 0.6);
+  box-shadow: 0 0 35px rgba(0, 0, 0, 0.4);
 }
 
 /* ✅ ALERT BOXES */
 .stAlert {
-  background-color: rgba(0, 70, 100, 0.85) !important;
-  border: 2px solid rgba(0, 200, 255, 0.6);
-  color: #dffeff !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border: 2px solid rgba(0, 0, 0, 0.6);
+  color: #000000 !important;
   font-weight: 600;
 }
 
-/* 🧭 SIDEBAR (optional) */
+/* 🧭 SIDEBAR */
 [data-testid="stSidebar"] {
-  background: rgba(0, 30, 50, 0.9) !important;
-  color: #e6faff !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  color: #000000 !important;
 }
 
 /* 🚫 FOOTER */
 footer {visibility: hidden;}
 section.main > div {padding-top: 0rem;}
 </style>
-""", unsafe_allow_html=True)
-
-
-
-# ------------------------------
-# 🧭 SIDEBAR NAVIGATION
-# ------------------------------
-st.sidebar.title("🔍 Navigation")
-page = st.sidebar.radio(
-    "Go to section:",
-    ["🏠 Overview", "🗺️ Map View", "📈 Microplastic Trends", "🌧️ Rainfall Insights", "📊 Correlation Analysis"]
-)
-
-# ------------------------------
-# 💡 ABOUT SECTION (always visible)
-# ------------------------------
-st.markdown("""
-<div style="text-align:center; padding:15px; background-color:rgba(255,255,255,0.85); border-radius:15px; box-shadow:0px 2px 10px rgba(0,0,0,0.2);">
-<h2>🌊 MicroSense AI: Intelligent River Health Monitoring</h2>
-<p style="font-size:1.1rem;">
-Empowering clean rivers through real-time microplastic detection, rainfall insights, and predictive analytics.  
-An initiative for a sustainable and data-driven environmental future.
-</p>
-</div>
 """, unsafe_allow_html=True)
 
 # ------------------------------

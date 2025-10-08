@@ -67,23 +67,16 @@ st.caption("Empowering clean rivers through live microplastic monitoring & rainf
 # ------------------------------
 # 📊 Load Data from Google Sheets
 # ------------------------------
-data_sheet_id = "1f_U67643pkM5JK_KgN0BU1gqL_EMz6v1"
-coord_sheet_id = "10K6rwt6BDcBzbmV2JSAc2wJH5SdLLH-LGiYthV9OMKw"
-rainfall_sheet_id = "1nRF6Tf6ZorBdEtU-fvV0Cyjv1Ts1LlL8"
+data_sheet_id = "1f_U67643pkM5JK_KgN0BU1gqL_EMz6v1"  # Data + Rainfall
+coord_sheet_id = "10K6rwt6BDcBzbmV2JSAc2wJH5SdLLH-LGiYthV9OMKw"  # Coordinates
 
 try:
     df_data = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{data_sheet_id}/export?format=csv")
     df_coords = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{coord_sheet_id}/export?format=csv")
-    df_rain = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{rainfall_sheet_id}/export?format=csv")
 
     # Clean column names
     df_data.columns = df_data.columns.str.strip().str.replace(" ", "_")
     df_coords.columns = df_coords.columns.str.strip().str.replace(" ", "_")
-    df_rain.columns = df_rain.columns.str.strip().str.replace(" ", "_")
-
-    # Merge rainfall if columns exist
-    if all(col in df_rain.columns for col in ["River", "Location", "Rainfall_mm"]):
-        df_data = pd.merge(df_data, df_rain[["River", "Location", "Rainfall_mm"]], on=["River", "Location"], how="left")
 
     st.success("✅ Live data loaded successfully!")
 except Exception as e:
@@ -101,10 +94,12 @@ for col in ["Latitude", "Longitude", "Microplastic_ppm"]:
         st.error(f"Missing required column: {col}. Please check your Google Sheet.")
         st.stop()
 
-# Convert types
+# Convert datatypes
 df["DateTime"] = pd.to_datetime(df.get("DateTime", datetime.now()), errors="coerce")
 df["Latitude"] = pd.to_numeric(df["Latitude"], errors="coerce")
 df["Longitude"] = pd.to_numeric(df["Longitude"], errors="coerce")
+if "Rainfall_mm" in df.columns:
+    df["Rainfall_mm"] = pd.to_numeric(df["Rainfall_mm"], errors="coerce")
 
 # ------------------------------
 # 🌍 River Selection
@@ -131,8 +126,10 @@ if not filtered_df.empty:
 
     c1, c2, c3 = st.columns(3)
     c1.markdown(f"<div class='metric-card'><h3>💧 Avg Microplastic</h3><h2>{avg_micro:.2f} ppm</h2></div>", unsafe_allow_html=True)
-    if avg_rain is not None:
+    if avg_rain is not None and not pd.isna(avg_rain):
         c2.markdown(f"<div class='metric-card'><h3>🌦️ Avg Rainfall</h3><h2>{avg_rain:.2f} mm</h2></div>", unsafe_allow_html=True)
+    else:
+        c2.markdown(f"<div class='metric-card'><h3>🌦️ Avg Rainfall</h3><h2>No Data</h2></div>", unsafe_allow_html=True)
     c3.markdown(f"<div class='metric-card'><h3>📅 Last Updated</h3><h2>{last_update.strftime('%H:%M, %b %d')}</h2></div>", unsafe_allow_html=True)
 
 # ------------------------------
@@ -142,7 +139,7 @@ st.subheader("📊 Recent Readings")
 st.dataframe(filtered_df.tail(10), use_container_width=True)
 
 # ------------------------------
-# 🗺️ Map Visualization (Safe Version)
+# 🗺️ Map Visualization (Always Show All Locations)
 # ------------------------------
 st.subheader("🗺️ Microplastic Hotspot Map")
 
@@ -157,7 +154,7 @@ if not map_df.empty:
         size="Microplastic_ppm",
         hover_name="Location",
         hover_data={"River": True, "Rainfall_mm": True},
-        color_continuous_scale="RdYlGn_r",
+        color_continuous_scale="RdYlGn_r",  # Red to Green scale
         zoom=4,
         height=550,
         title="🌍 Microplastic Concentration & Rainfall Impact"
@@ -174,7 +171,7 @@ else:
     st.warning("⚠️ No valid location data available to plot map.")
 
 # ------------------------------
-# 📈 Microplastic Trend Over Time (Location-Aware)
+# 📈 Microplastic Trend Over Time
 # ------------------------------
 st.subheader("📈 Microplastic Trend Over Time")
 

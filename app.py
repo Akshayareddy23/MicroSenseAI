@@ -74,7 +74,6 @@ try:
     df_data = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{data_sheet_id}/export?format=csv")
     df_coords = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{coord_sheet_id}/export?format=csv")
 
-    # Clean column names
     df_data.columns = df_data.columns.str.strip().str.replace(" ", "_")
     df_coords.columns = df_coords.columns.str.strip().str.replace(" ", "_")
 
@@ -87,14 +86,13 @@ except Exception as e:
 df = pd.merge(df_data, df_coords, on=["River", "Location"], how="left")
 
 # ------------------------------
-# 🧭 Data Validation
+# 🧭 Data Cleaning
 # ------------------------------
 for col in ["Latitude", "Longitude", "Microplastic_ppm"]:
     if col not in df.columns:
         st.error(f"Missing required column: {col}. Please check your Google Sheet.")
         st.stop()
 
-# Convert datatypes
 df["DateTime"] = pd.to_datetime(df.get("DateTime", datetime.now()), errors="coerce")
 df["Latitude"] = pd.to_numeric(df["Latitude"], errors="coerce")
 df["Longitude"] = pd.to_numeric(df["Longitude"], errors="coerce")
@@ -139,7 +137,7 @@ st.subheader("📊 Recent Readings")
 st.dataframe(filtered_df.tail(10), use_container_width=True)
 
 # ------------------------------
-# 🗺️ Map Visualization (Always Show All Locations)
+# 🗺️ Map Visualization (Always Show All)
 # ------------------------------
 st.subheader("🗺️ Microplastic Hotspot Map")
 
@@ -154,7 +152,7 @@ if not map_df.empty:
         size="Microplastic_ppm",
         hover_name="Location",
         hover_data={"River": True, "Rainfall_mm": True},
-        color_continuous_scale="RdYlGn_r",  # Red to Green scale
+        color_continuous_scale="RdYlGn_r",
         zoom=4,
         height=550,
         title="🌍 Microplastic Concentration & Rainfall Impact"
@@ -171,7 +169,7 @@ else:
     st.warning("⚠️ No valid location data available to plot map.")
 
 # ------------------------------
-# 📈 Microplastic Trend Over Time
+# 📈 Microplastic Trend
 # ------------------------------
 st.subheader("📈 Microplastic Trend Over Time")
 
@@ -191,13 +189,29 @@ if not trend_df.empty:
         title=f"Microplastic Levels Over Time {'for ' + selected_location if selected_location != '🌍 All Locations' else '(All Locations)'}",
         color_discrete_sequence=px.colors.qualitative.Vivid
     )
-    fig_micro.update_layout(
-        template="plotly_white",
-        paper_bgcolor="rgba(255,255,255,0.7)",
-        plot_bgcolor="rgba(255,255,255,0.85)",
-        font=dict(color="#002b36", size=14),
-        title_font=dict(size=20, color="#0077b6")
-    )
+    fig_micro.update_layout(template="plotly_white")
     st.plotly_chart(fig_micro, use_container_width=True)
 else:
     st.info("No microplastic data available for the selected location.")
+
+# ------------------------------
+# 🌧️ Rainfall Trend
+# ------------------------------
+if "Rainfall_mm" in filtered_df.columns:
+    st.subheader("🌧️ Rainfall Trend Over Time")
+
+    rain_df = trend_df.dropna(subset=["Rainfall_mm", "DateTime"])
+    if not rain_df.empty:
+        fig_rain = px.line(
+            rain_df,
+            x="DateTime",
+            y="Rainfall_mm",
+            color="River",
+            markers=True,
+            title=f"Rainfall Trend Over Time {'for ' + selected_location if selected_location != '🌍 All Locations' else '(All Locations)'}",
+            color_discrete_sequence=px.colors.sequential.Blues
+        )
+        fig_rain.update_layout(template="plotly_white")
+        st.plotly_chart(fig_rain, use_container_width=True)
+    else:
+        st.info("No rainfall data available for the selected location.")

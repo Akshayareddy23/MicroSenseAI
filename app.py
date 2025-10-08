@@ -237,6 +237,7 @@ st.caption("Upload a water sample image to detect microplastics and log results 
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
 def analyze_microplastics(image_path):
+    """Basic simulated AI analysis of microplastic count"""
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     blur = cv2.GaussianBlur(img, (5, 5), 0)
     _, thresh = cv2.threshold(blur, 127, 255, cv2.THRESH_BINARY_INV)
@@ -261,13 +262,30 @@ if uploaded_file is not None:
     river_name = st.text_input("🌊 River Name", value="Simulated River")
     location_name = st.text_input("📍 Location", value="Virtual Station")
 
-    if st.button("📤 Save Result to Sheet"):
+    if st.button("📤 Save Result to Google Sheet"):
         try:
-            sheet = connect_to_sheets("MicroSense Data")
-            sheet.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), river_name, location_name, ppm])
-            st.success("✅ Saved to Google Sheet!")
+            scopes = ["https://www.googleapis.com/auth/spreadsheets",
+                      "https://www.googleapis.com/auth/drive"]
+
+            creds = Credentials.from_service_account_info(
+                st.secrets["gcp_service_account"], scopes=scopes
+            )
+            client = gspread.authorize(creds)
+
+            # ✅ Open the Google Sheet by name
+            sheet = client.open("simulated_readings.csv").sheet1
+
+            # ✅ Append a new row
+            sheet.append_row([
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                river_name,
+                location_name,
+                ppm
+            ])
+
+            st.success("✅ Data successfully saved to Google Sheet!")
         except Exception as e:
-            st.error(f"❌ Could not upload: {e}")
+            st.error(f"❌ Google Sheets connection failed: {e}")
+
         finally:
-            if os.path.exists(img_path):
-                os.remove(img_path)
+            os.remove(img_path)

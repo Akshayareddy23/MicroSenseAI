@@ -117,44 +117,56 @@ for col in ["Latitude", "Longitude"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
 # ------------------------------
-# 🌍 River Selection
+# 🌍 River Selection (with 'All Rivers')
 # ------------------------------
-selected_river = st.selectbox("🌊 Select a River", options=df["River"].dropna().unique())
-filtered_df = df[df["River"] == selected_river]
+river_options = ["🌐 All Rivers"] + sorted(df["River"].dropna().unique().tolist())
+selected_river = st.selectbox("🌊 Select a River", options=river_options)
+
+if selected_river == "🌐 All Rivers":
+    filtered_df = df.copy()
+else:
+    filtered_df = df[df["River"] == selected_river]
 
 # ------------------------------
 # 📈 Key Stats
 # ------------------------------
 if not filtered_df.empty:
     latest_row = filtered_df.iloc[-1]
-    col1, col2, col3 = st.columns(3)
+    avg_micro = filtered_df["Microplastic_ppm"].mean()
+    avg_rain = filtered_df["Rainfall_mm"].mean() if "Rainfall_mm" in filtered_df else None
 
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown(f"""
         <div class="metric-card">
-            <h3>💧 Microplastic</h3>
-            <h2>{latest_row['Microplastic_ppm']} ppm</h2>
+            <h3>💧 Avg Microplastic</h3>
+            <h2>{avg_micro:.2f} ppm</h2>
         </div>""", unsafe_allow_html=True)
 
     with col2:
-        if "Rainfall_mm" in latest_row:
+        if avg_rain is not None:
             st.markdown(f"""
             <div class="metric-card">
-                <h3>🌦️ Rainfall</h3>
-                <h2>{latest_row['Rainfall_mm']} mm</h2>
+                <h3>🌦️ Avg Rainfall</h3>
+                <h2>{avg_rain:.2f} mm</h2>
             </div>""", unsafe_allow_html=True)
 
     with col3:
+        last_update = filtered_df["DateTime"].max()
         st.markdown(f"""
         <div class="metric-card">
             <h3>📅 Last Updated</h3>
-            <h2>{latest_row['DateTime'].strftime("%H:%M, %b %d")}</h2>
+            <h2>{last_update.strftime("%H:%M, %b %d")}</h2>
         </div>""", unsafe_allow_html=True)
 
 # ------------------------------
 # 📋 Data Table
 # ------------------------------
-st.subheader(f"📊 Recent Readings for {selected_river}")
+if selected_river == "🌐 All Rivers":
+    st.subheader("📊 Recent Readings: All Rivers Combined")
+else:
+    st.subheader(f"📊 Recent Readings for {selected_river}")
+
 st.dataframe(filtered_df.tail(10), use_container_width=True)
 
 # ------------------------------
@@ -167,9 +179,9 @@ if not filtered_df.empty:
         filtered_df,
         x="DateTime",
         y="Microplastic_ppm",
-        color="Location",
+        color="River" if selected_river == "🌐 All Rivers" else "Location",
         markers=True,
-        title=f"Microplastic Levels in {selected_river} Over Time",
+        title="Microplastic Levels Over Time",
         color_discrete_sequence=px.colors.qualitative.Vivid
     )
     fig.update_layout(
@@ -180,24 +192,13 @@ if not filtered_df.empty:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    latest_value = filtered_df["Microplastic_ppm"].iloc[-1]
-    st.markdown("### 🔔 Contamination Status:")
-    if latest_value < 5:
-        st.success("✅ Safe levels of microplastic detected.")
-    elif latest_value < 10:
-        st.warning("⚠️ Moderate contamination detected.")
-    else:
-        st.error("🚨 High contamination detected! Immediate action required.")
-else:
-    st.info("No data available for the selected river.")
-
 # ------------------------------
 # 🗺️ Map Visualization
 # ------------------------------
 st.subheader("🗺️ Microplastic Hotspot Map")
 
-if "Latitude" in df.columns and "Longitude" in df.columns:
-    valid_df = df.dropna(subset=["Latitude", "Longitude"])
+if "Latitude" in filtered_df.columns and "Longitude" in filtered_df.columns:
+    valid_df = filtered_df.dropna(subset=["Latitude", "Longitude"])
     fig_map = px.scatter_mapbox(
         valid_df,
         lat="Latitude",
@@ -224,20 +225,21 @@ else:
 # ------------------------------
 if "Rainfall_mm" in df.columns:
     st.subheader("🌦️ Rainfall Prediction (Based on Past Trends)")
-    rainfall_avg = df.groupby("Location", dropna=True)["Rainfall_mm"].mean().reset_index()
+    rainfall_avg = filtered_df.groupby("Location", dropna=True)["Rainfall_mm"].mean().reset_index()
     rainfall_avg["Predicted_Rainfall_mm"] = rainfall_avg["Rainfall_mm"] * 1.1
 
-    fig_rain = px.bar(
-        rainfall_avg,
-        x="Location",
-        y=["Rainfall_mm", "Predicted_Rainfall_mm"],
-        barmode="group",
-        title="Current vs Predicted Rainfall (mm)",
-        color_discrete_sequence=["#48cae4", "#023e8a"] if theme_mode == "🌞 Light Mode" else ["#5bc0be", "#3a506b"]
-    )
-    fig_rain.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=text_color, size=14)
-    )
-    st.plotly_chart(fig_rain, use_container_width=True)
+    if not rainfall_avg.empty:
+        fig_rain = px.bar(
+            rainfall_avg,
+            x="Location",
+            y=["Rainfall_mm", "Predicted_Rainfall_mm"],
+            barmode="group",
+            title="Current vs Predicted Rainfall (mm)",
+            color_discrete_sequence=["#48cae4", "#023e8a"] if theme_mode == "🌞 Light Mode" else ["#5bc0be", "#3a506b"]
+        )
+        fig_rain.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color=text_color, size=14)
+        )
+        st.plotly_chart(fig_rain, use_container_width=True)

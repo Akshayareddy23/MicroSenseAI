@@ -190,6 +190,44 @@ fig_map.update_layout(
     title_font=dict(size=20, color="#0077b6")
 )
 st.plotly_chart(fig_map, use_container_width=True)
+# ------------------------------
+# 📈 Microplastic Trend Over Time (Light Mode)
+# ------------------------------
+st.subheader("📈 Microplastic Trend Over Time")
+
+# Ensure DateTime and Microplastic_ppm are valid
+if "DateTime" in df.columns:
+    df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
+else:
+    st.warning("⚠️ No DateTime column found. Using current timestamps as fallback.")
+    df["DateTime"] = pd.Timestamp.now()
+
+df["Microplastic_ppm"] = pd.to_numeric(df["Microplastic_ppm"], errors="coerce")
+filtered_df = df.dropna(subset=["DateTime", "Microplastic_ppm"])
+
+if not filtered_df.empty:
+    fig_micro = px.line(
+        filtered_df,
+        x="DateTime",
+        y="Microplastic_ppm",
+        color="River",
+        markers=True,
+        title="Microplastic Levels Over Time",
+        color_discrete_sequence=px.colors.qualitative.Vivid
+    )
+    fig_micro.update_layout(
+        template="plotly_white",
+        paper_bgcolor="rgba(255,255,255,0.7)",
+        plot_bgcolor="rgba(255,255,255,0.85)",
+        font=dict(color="#002b36", size=14),
+        title_font=dict(size=20, color="#0077b6"),
+        legend_title_text="River",
+        margin=dict(l=20, r=20, t=50, b=20)
+    )
+    st.plotly_chart(fig_micro, use_container_width=True)
+else:
+    st.info("No microplastic data available for selected rivers.")
+
 
 # ------------------------------
 # 🌧️ Rainfall Insights & Prediction (Light Mode Only)

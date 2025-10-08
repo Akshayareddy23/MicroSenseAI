@@ -30,7 +30,7 @@ except Exception as e:
     })
 
 # Ensure DateTime is proper datetime type
-df["DateTime"] = pd.to_datetime(df["Timestamp"], errors='coerce')
+df["DateTime"] = pd.to_datetime(df["DateTime"], errors='coerce')
 
 # Store in session_state so user can add readings
 if "data" not in st.session_state:
@@ -105,3 +105,44 @@ if not filtered_df.empty:
         st.error("🚨 High contamination detected! Immediate action required.")
 else:
     st.info("No data available for the selected river.")
+# 🌍 Map Visualization
+st.subheader("🗺️ Microplastic Hotspot Map")
+
+# Ensure coordinates exist
+if "Latitude" in df.columns and "Longitude" in df.columns:
+    fig_map = px.scatter_mapbox(
+        df,
+        lat="Latitude",
+        lon="Longitude",
+        color="Microplastic_ppm",
+        size="Microplastic_ppm",
+        hover_name="Location",
+        hover_data=["River", "Rainfall_mm"],
+        color_continuous_scale="RdYlGn_r",
+        zoom=4,
+        height=500,
+        title="Microplastic Concentration by Location"
+    )
+    fig_map.update_layout(mapbox_style="open-street-map")
+    st.plotly_chart(fig_map, use_container_width=True)
+else:
+    st.warning("⚠️ Coordinates (Latitude, Longitude) missing in your data.")
+# 🌧️ Simple Rainfall Prediction (Demo)
+st.subheader("🌦️ Rainfall Prediction")
+
+# Group by location and take average
+rainfall_avg = df.groupby("Location")["Rainfall_mm"].mean().reset_index()
+
+# Add mock predictions (increasing trend)
+rainfall_avg["Predicted_Rainfall_mm"] = rainfall_avg["Rainfall_mm"] * 1.1
+
+st.dataframe(rainfall_avg)
+
+fig_rain = px.bar(
+    rainfall_avg,
+    x="Location",
+    y=["Rainfall_mm", "Predicted_Rainfall_mm"],
+    barmode="group",
+    title="Current vs Predicted Rainfall (mm)"
+)
+st.plotly_chart(fig_rain, use_container_width=True)

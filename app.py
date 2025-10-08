@@ -17,17 +17,21 @@ import os
 # ------------------------------------------------
 # 🪪 Google Sheets Authentication (from Secrets)
 # ------------------------------------------------
-def connect_to_sheets(sheet_name):
-    scopes = ["https://www.googleapis.com/auth/spreadsheets",
-              "https://www.googleapis.com/auth/drive"]
-
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"], scopes=scopes
-    )
-
-    client = gspread.authorize(creds)
-    sheet = client.open(sheet_name).sheet1
-    return sheet
+def connect_to_sheets(sheet_name: str):
+    try:
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], scopes=scopes
+        )
+        client = gspread.authorize(creds)
+        sheet = client.open(sheet_name).sheet1
+        return sheet
+    except Exception as e:
+        st.error(f"❌ Google Sheets connection failed: {e}")
+        st.stop()
 
 # ------------------------------------------------
 # 📄 Page Config & Background
@@ -125,6 +129,7 @@ selected_rivers = st.multiselect(
     options=river_options,
     default=["🌐 All Rivers"]
 )
+
 filtered_df = df if "🌐 All Rivers" in selected_rivers else df[df["River"].isin(selected_rivers)]
 
 # ------------------------------------------------
@@ -255,6 +260,7 @@ if uploaded_file is not None:
 
     river_name = st.text_input("🌊 River Name", value="Simulated River")
     location_name = st.text_input("📍 Location", value="Virtual Station")
+
     if st.button("📤 Save Result to Sheet"):
         try:
             sheet = connect_to_sheets("MicroSense Data")
@@ -262,4 +268,6 @@ if uploaded_file is not None:
             st.success("✅ Saved to Google Sheet!")
         except Exception as e:
             st.error(f"❌ Could not upload: {e}")
-        os.remove(img_path)
+        finally:
+            if os.path.exists(img_path):
+                os.remove(img_path)

@@ -12,13 +12,10 @@ st.title("🌊 MicroSense AI: Real-Time Microplastic Detection Dashboard")
 # ------------------------------
 # 📊 Load Data from Google Sheets
 # ------------------------------
+data_sheet_id = "1f_U67643pkM5JK_KgN0BU1gqL_EMz6v1"  # Main data
+coord_sheet_id = "10K6rwt6BDcBzbmV2JSAc2wJH5SdLLH-LGiYthV9OMKw"  # Coordinates
 
-# Main data sheet (microplastic readings)
-data_sheet_id = "1f_U67643pkM5JK_KgN0BU1gqL_EMz6v1"
 data_csv_url = f"https://docs.google.com/spreadsheets/d/{data_sheet_id}/export?format=csv"
-
-# Coordinates sheet (river locations)
-coord_sheet_id = "10K6rwt6BDcBzbmV2JSAc2wJH5SdLLH-LGiYthV9OMKw"
 coord_csv_url = f"https://docs.google.com/spreadsheets/d/{coord_sheet_id}/export?format=csv"
 
 try:
@@ -31,7 +28,6 @@ except Exception as e:
         "DateTime": ["2025-10-07 08:00", "2025-10-07 09:00", "2025-10-07 10:00"],
         "River": ["Ganga", "Ganga", "Ganga"],
         "Location": ["Varanasi", "Varanasi", "Varanasi"],
-        "Rainfall_mm": [5, 6, 3],
         "Microplastic_ppm": [8, 9, 10],
     })
     df_coords = pd.DataFrame({
@@ -41,17 +37,17 @@ except Exception as e:
         "Longitude": [82.9739]
     })
 
-# Merge main data with coordinates (on River and Location)
+# Merge the two datasets on River and Location
 df = pd.merge(df_data, df_coords, on=["River", "Location"], how="left")
 
 # Ensure DateTime is proper datetime type
 if "DateTime" in df.columns:
-    df["DateTime"] = pd.to_datetime(df["DateTime"], errors='coerce')
+    df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
 else:
-    st.warning("⚠️ No 'DateTime' column found in your sheet. Using current timestamp.")
+    st.warning("⚠️ No 'DateTime' column found — using current timestamp instead.")
     df["DateTime"] = datetime.now()
 
-# Store in session_state so user can add readings
+# Store in session_state so user can add new readings
 if "data" not in st.session_state:
     st.session_state.data = df.copy()
 
@@ -62,8 +58,8 @@ st.sidebar.header("➕ Add New Reading")
 with st.sidebar.form("new_data"):
     river = st.text_input("River Name", "Ganga")
     location = st.text_input("Location", "Varanasi")
-    rainfall = st.number_input("Rainfall (mm)", min_value=0, step=1)
     microplastic = st.number_input("Microplastic (ppm)", min_value=0, step=1)
+    rainfall = st.number_input("Rainfall (mm)", min_value=0, step=1)
     submit = st.form_submit_button("Add Reading")
 
 if submit:
@@ -71,8 +67,8 @@ if submit:
         "DateTime": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "River": river,
         "Location": location,
-        "Rainfall_mm": rainfall,
         "Microplastic_ppm": microplastic,
+        "Rainfall_mm": rainfall
     }
     st.session_state.data = pd.concat(
         [st.session_state.data, pd.DataFrame([new_row])],
@@ -96,9 +92,9 @@ st.subheader(f"Recent Microplastic Readings for {selected_river}")
 st.dataframe(filtered_df.tail(10))
 
 # ------------------------------
-# 📈 Plot Microplastic Trends
+# 📈 Microplastic Trend Chart
 # ------------------------------
-st.subheader("Microplastic Trend Over Time")
+st.subheader("📈 Microplastic Trend Over Time")
 
 if not filtered_df.empty:
     fig = px.line(
@@ -111,7 +107,6 @@ if not filtered_df.empty:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Alerts
     latest_value = filtered_df["Microplastic_ppm"].iloc[-1]
     st.markdown("### 🔔 Contamination Status:")
     if latest_value < 5:
@@ -129,40 +124,47 @@ else:
 st.subheader("🗺️ Microplastic Hotspot Map")
 
 if "Latitude" in df.columns and "Longitude" in df.columns:
-    fig_map = px.scatter_mapbox(
-    df,
-    lat="Latitude",
-    lon="Longitude",
-    color="Microplastic_ppm",
-    size="Microplastic_ppm",
-    hover_name="Location",
-    hover_data=["River", "Rainfall_mm"],
-    color_continuous_scale="RdYlGn_r",
-    zoom=4,
-    height=500,
-    title="Microplastic Concentration by Location"
-)
+    # Hover info will include rainfall only if available
+    hover_columns = ["River", "Location", "Microplastic_ppm"]
+    if "Rainfall_mm" in df.columns:
+        hover_columns.append("Rainfall_mm")
 
+    fig_map = px.scatter_mapbox(
+        df,
+        lat="Latitude",
+        lon="Longitude",
+        color="Microplastic_ppm",
+        size="Microplastic_ppm",
+        hover_name="Location",
+        hover_data=hover_columns,
+        color_continuous_scale="RdYlGn_r",
+        zoom=4,
+        height=500,
+        title="Microplastic Concentration by Location"
+    )
     fig_map.update_layout(mapbox_style="open-street-map")
     st.plotly_chart(fig_map, use_container_width=True)
 else:
     st.warning("⚠️ Coordinates (Latitude, Longitude) missing in your data.")
 
 # ------------------------------
-# 🌧️ Simple Rainfall Prediction (Demo)
+# 🌧️ Optional: Rainfall Prediction
 # ------------------------------
-st.subheader("🌦️ Rainfall Prediction")
+if "Rainfall_mm" in df.columns:
+    st.subheader("🌦️ Rainfall Prediction")
 
-rainfall_avg = df.groupby("Location")["Rainfall_mm"].mean().reset_index()
-rainfall_avg["Predicted_Rainfall_mm"] = rainfall_avg["Rainfall_mm"] * 1.1
+    rainfall_avg = df.groupby("Location")["Rainfall_mm"].mean().reset_index()
+    rainfall_avg["Predicted_Rainfall_mm"] = rainfall_avg["Rainfall_mm"] * 1.1  # +10%
 
-st.dataframe(rainfall_avg)
+    st.dataframe(rainfall_avg)
 
-fig_rain = px.bar(
-    rainfall_avg,
-    x="Location",
-    y=["Rainfall_mm", "Predicted_Rainfall_mm"],
-    barmode="group",
-    title="Current vs Predicted Rainfall (mm)"
-)
-st.plotly_chart(fig_rain, use_container_width=True)
+    fig_rain = px.bar(
+        rainfall_avg,
+        x="Location",
+        y=["Rainfall_mm", "Predicted_Rainfall_mm"],
+        barmode="group",
+        title="Current vs Predicted Rainfall (mm)"
+    )
+    st.plotly_chart(fig_rain, use_container_width=True)
+else:
+    st.info("☁️ Add a 'Rainfall_mm' column in your Google Sheet to enable rainfall prediction.")

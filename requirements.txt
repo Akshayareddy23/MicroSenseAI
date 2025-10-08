@@ -3,4 +3,7 @@ pandas
 plotly
 numpy
 geopandas
+gspread
+google-auth
+
 

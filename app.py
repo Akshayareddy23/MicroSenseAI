@@ -1,33 +1,37 @@
+# ------------------------------
+# 🌊 IMPORTS (all at the top)
+# ------------------------------
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
+import numpy as np
 import gspread
 from google.oauth2.service_account import Credentials
+from oauth2client.service_account import ServiceAccountCredentials
+import cv2
+import tempfile
+from PIL import Image
+import os
+from datetime import datetime
 
-# Connect to Google Sheets
+# ------------------------------
+# 🔑 Google Sheets Connection
+# ------------------------------
 def connect_to_sheets(sheet_name):
-    # Define Google API scopes
     scopes = ["https://spreadsheets.google.com/feeds",
               "https://www.googleapis.com/auth/drive"]
 
-    # Load credentials
     creds = Credentials.from_service_account_file(
         "microsense-service-key.json", scopes=scopes
     )
-
-    # Authorize client
     client = gspread.authorize(creds)
-
-    # Open Google Sheet by name (or use .open_by_key for sheet ID)
     sheet = client.open(sheet_name).sheet1
     return sheet
-from datetime import datetime
+
 
 def add_new_reading(sheet, river, location, microplastic_ppm, rainfall_mm):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sheet.append_row([now, river, location, microplastic_ppm, rainfall_mm])
-
 
 # ------------------------------
 # 🌊 Page Configuration
@@ -53,26 +57,26 @@ opacity: 0.7;">
 st.markdown(video_bg, unsafe_allow_html=True)
 
 # ------------------------------
-# 🎨 Light Theme Styling
+# 🎨 Styling
 # ------------------------------
 st.markdown("""
 <style>
 body {
-  color: #002b36;
+  color: black;
   font-family: 'Segoe UI', sans-serif;
 }
 .main > div:first-child h1 {
-  color: #0077b6;
+  color: black;
   text-align: center;
   font-size: 2.6rem;
-  font-weight: 800;
-  text-shadow: 0px 0px 10px rgba(0,0,0,0.3);
+  font-weight: 900;
+  text-shadow: 0px 0px 6px rgba(255,255,255,0.6);
 }
 .metric-card {
-  background: linear-gradient(135deg, rgba(202,240,248,0.85), rgba(144,224,239,0.85));
+  background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(210,210,210,0.85));
   padding: 1.2rem;
   border-radius: 1rem;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
   text-align: center;
   backdrop-filter: blur(10px);
   transition: all 0.3s;
@@ -163,7 +167,7 @@ st.subheader("📊 Recent Readings")
 st.dataframe(filtered_df.tail(10), use_container_width=True)
 
 # ------------------------------
-# 🗺️ Map Visualization (Always Show All)
+# 🗺️ Map Visualization
 # ------------------------------
 st.subheader("🗺️ Microplastic Hotspot Map")
 
@@ -187,8 +191,8 @@ if not map_df.empty:
         mapbox_style="open-street-map",
         paper_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=10, r=10, t=60, b=10),
-        font=dict(color="#002b36", size=14),
-        title_font=dict(size=20, color="#0077b6")
+        font=dict(color="black", size=14),
+        title_font=dict(size=20, color="black")
     )
     st.plotly_chart(fig_map, use_container_width=True)
 else:
@@ -240,24 +244,16 @@ if "Rainfall_mm" in filtered_df.columns:
         fig_rain.update_layout(template="plotly_white")
         st.plotly_chart(fig_rain, use_container_width=True)
     else:
-        st.info("No rainfall data available for the selected location.")# -------------------------------------------
-# 📸 LIVE IMAGE MONITORING (Using existing Google Sheet)
-# -------------------------------------------
-import cv2
-import numpy as np
-import tempfile
-from PIL import Image
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
-import os
+        st.info("No rainfall data available for the selected location.")
 
+# ------------------------------
+# 📸 LIVE IMAGE MONITORING
+# ------------------------------
 st.header("📸 Live AI Image Monitoring")
 st.caption("Upload a river water sample image to detect microplastics and log results into your existing Google Sheet 🌊")
 
 uploaded_file = st.file_uploader("Upload a water image", type=["jpg", "jpeg", "png"])
 
-# --- Simple AI-based Microplastic Detector ---
 def analyze_microplastics(image_path):
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     blur = cv2.GaussianBlur(img, (5, 5), 0)
@@ -266,18 +262,14 @@ def analyze_microplastics(image_path):
     ppm = round(min(100, count / 10), 2)
     return count, ppm
 
-# --- Upload result to existing Google Sheet ---
 def push_to_existing_sheet(river, location, micro_ppm, lat, lon):
     try:
-        # Google API authorization
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
         client = gspread.authorize(creds)
 
-        # Use your OLD sheet here ✅
         sheet = client.open_by_key("10K6rwt6BDcBzbmV2JSAc2wJH5SdLLH-LGiYthV9OMKw").sheet1
 
-        # Append the new data row
         sheet.append_row([
             river,
             location,
@@ -287,12 +279,10 @@ def push_to_existing_sheet(river, location, micro_ppm, lat, lon):
             lat,
             lon
         ])
-
         st.success("✅ Added to your existing Google Sheet successfully!")
     except Exception as e:
         st.error(f"❌ Could not upload: {e}")
 
-# --- Handle upload + processing ---
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
@@ -315,5 +305,3 @@ if uploaded_file is not None:
     if st.button("📤 Save Result to Sheet"):
         push_to_existing_sheet(river_name, location_name, ppm, latitude, longitude)
         os.remove(img_path)
-
-

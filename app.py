@@ -6,32 +6,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import numpy as np
-import gspread
-from google.oauth2.service_account import Credentials
 from datetime import datetime
-import cv2
-import tempfile
-from PIL import Image
-import os
-
-# ------------------------------------------------
-# 🪪 Google Sheets Authentication (from Secrets)
-# ------------------------------------------------
-def connect_to_sheets(sheet_name: str):
-    try:
-        scopes = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds = Credentials.from_service_account_info(
-            st.secrets["gcp_service_account"], scopes=scopes
-        )
-        client = gspread.authorize(creds)
-        sheet = client.open(sheet_name).sheet1
-        return sheet
-    except Exception as e:
-        st.error(f"❌ Google Sheets connection failed: {e}")
-        st.stop()
 
 # ------------------------------------------------
 # 📄 Page Config & Background
@@ -129,7 +104,6 @@ selected_rivers = st.multiselect(
     options=river_options,
     default=["🌐 All Rivers"]
 )
-
 filtered_df = df if "🌐 All Rivers" in selected_rivers else df[df["River"].isin(selected_rivers)]
 
 # ------------------------------------------------
@@ -227,75 +201,3 @@ if "Rainfall_mm" in filtered_df.columns:
         st.plotly_chart(fig_rain, use_container_width=True)
     else:
         st.info("No rainfall data available for the selected location.")
-# ------------------------------------------------
-# 📸 Live Image Monitoring
-# ------------------------------------------------
-st.header("📸 Live AI Image Monitoring")
-st.caption("Upload a water sample image to detect microplastics and log results into Google Sheets")
-
-uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
-
-def analyze_microplastics(image_path):
-    try:
-        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        if img is None:
-            raise ValueError("Image not read correctly (cv2 returned None)")
-
-        blur = cv2.GaussianBlur(img, (5, 5), 0)
-        _, thresh = cv2.threshold(blur, 127, 255, cv2.THRESH_BINARY_INV)
-        count = cv2.countNonZero(thresh) // 100  # arbitrary scaling
-        ppm = round(min(100, count / 10), 2)
-        return count, ppm
-    except Exception as e:
-        st.error(f"⚠️ Error analyzing image: {e}")
-        return 0, 0
-
-if uploaded_file is not None:
-    # Display the image
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Sample", use_container_width=True)
-
-    # Save to a temporary file for OpenCV to process
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-        image.save(tmp.name, format="JPEG")
-        img_path = tmp.name
-
-    # Run analysis
-    with st.spinner("🔬 Analyzing microplastics..."):
-        count, ppm = analyze_microplastics(img_path)
-
-    # Show results
-    if count > 0:
-        st.success(f"✅ Detected approximately **{count} microplastic particles**")
-        st.metric("Estimated Concentration", f"{ppm} ppm")
-    else:
-        st.warning("⚠️ No microplastics detected or image unreadable.")
-
-    # Input metadata for saving
-    river_name = st.text_input("🌊 River Name", value="Simulated River")
-    location_name = st.text_input("📍 Location", value="Virtual Station")
-
-    if st.button("📤 Save Result to Google Sheet"):
-        try:
-            scopes = ["https://www.googleapis.com/auth/spreadsheets",
-                      "https://www.googleapis.com/auth/drive"]
-
-            creds = Credentials.from_service_account_info(
-                st.secrets["gcp_service_account"], scopes=scopes
-            )
-            client = gspread.authorize(creds)
-
-            # ✅ Use your actual Google Sheet ID here
-            sheet = client.open_by_key("YOUR_SHEET_ID_HERE").sheet1
-            sheet.append_row([
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                river_name,
-                location_name,
-                ppm
-            ])
-            st.success("✅ Result saved to Google Sheet successfully!")
-        except Exception as e:
-            st.error(f"❌ Google Sheets connection failed: {e}")
-        finally:
-            if os.path.exists(img_path):
-                os.remove(img_path)

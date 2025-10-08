@@ -1,151 +1,217 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from datetime import datetime
 
-# --- Page Setup ---
-st.set_page_config(
-    page_title="🌊 MicroSense AI Dashboard",
-    layout="wide"
-)
+# ------------------------------
+# 🌊 Page Configuration
+# ------------------------------
+st.set_page_config(page_title="MicroSense AI", page_icon="🌊", layout="wide")
 
-# --- Background Video Styling ---
+# ------------------------------
+# 💦 Full Water Background (Video)
+# ------------------------------
+video_bg = """
+<video autoplay muted loop id="bgvid" style="
+position: fixed;
+right: 0;
+bottom: 0;
+min-width: 100%;
+min-height: 100%;
+z-index: -1;
+object-fit: cover;
+opacity: 0.7;">
+<source src="https://cdn.pixabay.com/vimeo/397868884/waves-33833.mp4?width=1280" type="video/mp4">
+</video>
+"""
+st.markdown(video_bg, unsafe_allow_html=True)
+
+# ------------------------------
+# 🎨 Light Theme Styling
+# ------------------------------
 st.markdown("""
-    <style>
-    .stApp {
-        background: url("https://media.tenor.com/u2lRIkC6EqAAAAAd/water-ripples.gif");
-        background-size: cover;
-        background-attachment: fixed;
-        background-repeat: no-repeat;
-    }
-    h1, h2, h3, h4, h5, h6, p {
-        color: black !important;
-        font-weight: 800 !important;
-        text-shadow: 0px 0px 4px white;
-    }
-    </style>
+<style>
+body {
+  color: #002b36;
+  font-family: 'Segoe UI', sans-serif;
+}
+.main > div:first-child h1 {
+  color: #0077b6;
+  text-align: center;
+  font-size: 2.6rem;
+  font-weight: 800;
+  text-shadow: 0px 0px 10px rgba(0,0,0,0.3);
+}
+.metric-card {
+  background: linear-gradient(135deg, rgba(202,240,248,0.85), rgba(144,224,239,0.85));
+  padding: 1.2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+  text-align: center;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s;
+}
+.metric-card:hover {
+  transform: scale(1.03);
+}
+footer {visibility: hidden;}
+</style>
 """, unsafe_allow_html=True)
 
-# --- Title ---
-st.title("🌊 MicroSense AI — Real-Time River Health & Rainfall Insights")
+# ------------------------------
+# 🌊 Header
+# ------------------------------
+st.title("🌊 MicroSense AI: Real-Time Microplastic Detection Dashboard")
+st.caption("Empowering clean rivers through live microplastic monitoring & rainfall insights")
 
-# --- Load Data from Google Sheets ---
-sheet_url = "https://docs.google.com/spreadsheets/d/1nRF6Tf6ZorBdEtU-fvV0Cyjv1Ts1LlL8/export?format=csv"
+# ------------------------------
+# 📊 Load Data from Google Sheets
+# ------------------------------
+data_sheet_id = "1f_U67643pkM5JK_KgN0BU1gqL_EMz6v1"  # Data + Rainfall
+coord_sheet_id = "10K6rwt6BDcBzbmV2JSAc2wJH5SdLLH-LGiYthV9OMKw"  # Coordinates
 
 try:
-    df = pd.read_csv(sheet_url)
-    st.success("✅ Live river & rainfall data loaded successfully!")
+    df_data = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{data_sheet_id}/export?format=csv")
+    df_coords = pd.read_csv(f"https://docs.google.com/spreadsheets/d/{coord_sheet_id}/export?format=csv")
+
+    df_data.columns = df_data.columns.str.strip().str.replace(" ", "_")
+    df_coords.columns = df_coords.columns.str.strip().str.replace(" ", "_")
+
+    st.success("✅ Live data loaded successfully!")
 except Exception as e:
     st.error(f"❌ Could not load data: {e}")
     st.stop()
 
-# --- Clean Data ---
-df.columns = [c.strip() for c in df.columns]
-if "Latitude" not in df.columns or "Longitude" not in df.columns:
-    st.error("❌ Latitude and Longitude columns are required for map display.")
-    st.stop()
+# Merge coordinates
+df = pd.merge(df_data, df_coords, on=["River", "Location"], how="left")
 
-# --- Sidebar ---
-st.sidebar.header("🔍 Filter Options")
-rivers = ["All Rivers"] + sorted(df["River"].dropna().unique().tolist())
-selected_river = st.sidebar.selectbox("Select a River", rivers)
+# ------------------------------
+# 🧭 Data Cleaning
+# ------------------------------
+for col in ["Latitude", "Longitude", "Microplastic_ppm"]:
+    if col not in df.columns:
+        st.error(f"Missing required column: {col}. Please check your Google Sheet.")
+        st.stop()
 
-# --- Filter by River ---
-if selected_river != "All Rivers":
-    filtered_df = df[df["River"] == selected_river]
-else:
-    filtered_df = df
+df["DateTime"] = pd.to_datetime(df.get("DateTime", datetime.now()), errors="coerce")
+df["Latitude"] = pd.to_numeric(df["Latitude"], errors="coerce")
+df["Longitude"] = pd.to_numeric(df["Longitude"], errors="coerce")
+if "Rainfall_mm" in df.columns:
+    df["Rainfall_mm"] = pd.to_numeric(df["Rainfall_mm"], errors="coerce")
 
-# --- Map Visualization ---
-st.subheader("🗺️ River Locations & Microplastic Levels")
+# ------------------------------
+# 🌍 River Selection
+# ------------------------------
+st.subheader("🌊 Select Rivers")
+river_list = sorted(df["River"].dropna().unique().tolist())
+river_options = ["🌐 All Rivers"] + river_list
 
-if not filtered_df.empty and "Latitude" in filtered_df.columns and "Longitude" in filtered_df.columns:
+selected_rivers = st.multiselect(
+    "Select one or more rivers (or choose 🌐 All Rivers to view all):",
+    options=river_options,
+    default=["🌐 All Rivers"]
+)
+
+filtered_df = df if "🌐 All Rivers" in selected_rivers else df[df["River"].isin(selected_rivers)]
+
+# ------------------------------
+# 📈 Key Stats
+# ------------------------------
+if not filtered_df.empty:
+    avg_micro = filtered_df["Microplastic_ppm"].mean()
+    avg_rain = filtered_df["Rainfall_mm"].mean() if "Rainfall_mm" in filtered_df else None
+    last_update = filtered_df["DateTime"].max()
+
+    c1, c2, c3 = st.columns(3)
+    c1.markdown(f"<div class='metric-card'><h3>💧 Avg Microplastic</h3><h2>{avg_micro:.2f} ppm</h2></div>", unsafe_allow_html=True)
+    if avg_rain is not None and not pd.isna(avg_rain):
+        c2.markdown(f"<div class='metric-card'><h3>🌦️ Avg Rainfall</h3><h2>{avg_rain:.2f} mm</h2></div>", unsafe_allow_html=True)
+    else:
+        c2.markdown(f"<div class='metric-card'><h3>🌦️ Avg Rainfall</h3><h2>No Data</h2></div>", unsafe_allow_html=True)
+    c3.markdown(f"<div class='metric-card'><h3>📅 Last Updated</h3><h2>{last_update.strftime('%H:%M, %b %d')}</h2></div>", unsafe_allow_html=True)
+
+# ------------------------------
+# 📋 Data Table
+# ------------------------------
+st.subheader("📊 Recent Readings")
+st.dataframe(filtered_df.tail(10), use_container_width=True)
+
+# ------------------------------
+# 🗺️ Map Visualization (Always Show All)
+# ------------------------------
+st.subheader("🗺️ Microplastic Hotspot Map")
+
+map_df = df.dropna(subset=["Latitude", "Longitude", "Microplastic_ppm"]).copy()
+
+if not map_df.empty:
     fig_map = px.scatter_mapbox(
-        df,  # Show all river points even if one river is selected
+        map_df,
         lat="Latitude",
         lon="Longitude",
         color="Microplastic_ppm",
         size="Microplastic_ppm",
-        hover_name="River",
-        hover_data=["Location", "Microplastic_ppm"],
+        hover_name="Location",
+        hover_data={"River": True, "Rainfall_mm": True},
         color_continuous_scale="RdYlGn_r",
-        zoom=5,
-        height=500,
-        title="🌍 River Network: Microplastic Concentration Overview"
+        zoom=4,
+        height=550,
+        title="🌍 Microplastic Concentration & Rainfall Impact"
     )
-    fig_map.update_layout(mapbox_style="open-street-map")
-    fig_map.update_layout(margin={"r":0,"t":40,"l":0,"b":0})
+    fig_map.update_layout(
+        mapbox_style="open-street-map",
+        paper_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=10, r=10, t=60, b=10),
+        font=dict(color="#002b36", size=14),
+        title_font=dict(size=20, color="#0077b6")
+    )
     st.plotly_chart(fig_map, use_container_width=True)
 else:
-    st.warning("⚠️ No valid coordinate data available to plot the map.")
+    st.warning("⚠️ No valid location data available to plot map.")
 
-# --- Microplastic Trend Graph ---
+# ------------------------------
+# 📈 Microplastic Trend
+# ------------------------------
 st.subheader("📈 Microplastic Trend Over Time")
 
-if "DateTime" in df.columns:
-    df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
-    if selected_river != "All Rivers":
-        fig_trend = px.line(
-            filtered_df,
-            x="DateTime",
-            y="Microplastic_ppm",
-            color="Location",
-            markers=True,
-            title=f"📊 Microplastic Trend in {selected_river}"
-        )
-    else:
-        fig_trend = px.line(
-            df,
-            x="DateTime",
-            y="Microplastic_ppm",
-            color="River",
-            markers=True,
-            title="📊 Microplastic Trend Across All Rivers"
-        )
-    st.plotly_chart(fig_trend, use_container_width=True)
-else:
-    st.warning("⚠️ 'DateTime' column missing, unable to plot time trends.")
+available_locations = filtered_df["Location"].dropna().unique().tolist()
+selected_location = st.selectbox("📍 Select a Location", options=["🌍 All Locations"] + available_locations)
 
-# --- Rainfall Graph ---
-st.subheader("🌧️ Rainfall Trends by River")
+trend_df = filtered_df if selected_location == "🌍 All Locations" else filtered_df[filtered_df["Location"] == selected_location]
+trend_df = trend_df.dropna(subset=["DateTime", "Microplastic_ppm"])
 
-if "Rainfall_mm" in df.columns:
-    df["Rainfall_mm"] = pd.to_numeric(df["Rainfall_mm"], errors="coerce")
-    avg_rain = df["Rainfall_mm"].mean(skipna=True)
-    st.metric("🌦️ Average Rainfall", f"{avg_rain:.2f} mm")
-
-    fig_rain = px.bar(
-        df,
-        x="River",
-        y="Rainfall_mm",
-        color="Rainfall_mm",
-        color_continuous_scale="Blues",
-        title="🌧️ Average Rainfall per River"
-    )
-    st.plotly_chart(fig_rain, use_container_width=True)
-else:
-    st.warning("⚠️ Rainfall data not found in this dataset.")
-
-# --- Correlation Chart ---
-st.subheader("🔬 Correlation: Rainfall vs Microplastic Concentration")
-
-if "Rainfall_mm" in df.columns:
-    corr_df = df.dropna(subset=["Microplastic_ppm", "Rainfall_mm"])
-    fig_corr = px.scatter(
-        corr_df,
-        x="Rainfall_mm",
+if not trend_df.empty:
+    fig_micro = px.line(
+        trend_df,
+        x="DateTime",
         y="Microplastic_ppm",
         color="River",
-        title="💧 Impact of Rainfall on Microplastic Concentration",
-        trendline="ols",
-        color_discrete_sequence=px.colors.qualitative.Bold
+        markers=True,
+        title=f"Microplastic Levels Over Time {'for ' + selected_location if selected_location != '🌍 All Locations' else '(All Locations)'}",
+        color_discrete_sequence=px.colors.qualitative.Vivid
     )
-    st.plotly_chart(fig_corr, use_container_width=True)
+    fig_micro.update_layout(template="plotly_white")
+    st.plotly_chart(fig_micro, use_container_width=True)
 else:
-    st.warning("⚠️ No rainfall data available to show correlation chart.")
+    st.info("No microplastic data available for the selected location.")
 
-# --- Footer ---
-st.markdown("""
----
-🎯 **MicroSense AI** — Empowering a cleaner, smarter water ecosystem through real-time environmental insights.  
-💧 Developed with ❤️ using Streamlit, Plotly & Google Cloud.
-""")
+# ------------------------------
+# 🌧️ Rainfall Trend
+# ------------------------------
+if "Rainfall_mm" in filtered_df.columns:
+    st.subheader("🌧️ Rainfall Trend Over Time")
+
+    rain_df = trend_df.dropna(subset=["Rainfall_mm", "DateTime"])
+    if not rain_df.empty:
+        fig_rain = px.line(
+            rain_df,
+            x="DateTime",
+            y="Rainfall_mm",
+            color="River",
+            markers=True,
+            title=f"Rainfall Trend Over Time {'for ' + selected_location if selected_location != '🌍 All Locations' else '(All Locations)'}",
+            color_discrete_sequence=px.colors.sequential.Blues
+        )
+        fig_rain.update_layout(template="plotly_white")
+        st.plotly_chart(fig_rain, use_container_width=True)
+    else:
+        st.info("No rainfall data available for the selected location.")

@@ -53,6 +53,16 @@ body {
 .metric-card:hover {
   transform: scale(1.03);
 }
+.alert-box {
+  background: rgba(255,0,0,0.2);
+  border: 2px solid red;
+  color: red;
+  font-weight: bold;
+  padding: 1rem;
+  border-radius: 0.8rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
 footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -105,6 +115,19 @@ selected_rivers = st.multiselect(
     default=["🌐 All Rivers"]
 )
 filtered_df = df if "🌐 All Rivers" in selected_rivers else df[df["River"].isin(selected_rivers)]
+
+# ------------------------------------------------
+# 🚨 Threshold Alert
+# ------------------------------------------------
+st.subheader("🚨 Alert System — Microplastic Safety Threshold")
+threshold = st.slider("Set microplastic safety threshold (ppm):", 10, 100, 50)
+exceeded = filtered_df[filtered_df["Microplastic_ppm"] > threshold]
+
+if not exceeded.empty:
+    st.markdown(f"<div class='alert-box'>⚠️ ALERT: {len(exceeded)} readings exceeded {threshold} ppm limit!</div>", unsafe_allow_html=True)
+    st.dataframe(exceeded[["River", "Location", "Microplastic_ppm", "DateTime"]])
+else:
+    st.success(f"✅ All microplastic readings are below the {threshold} ppm threshold.")
 
 # ------------------------------------------------
 # 📈 Key Stats
@@ -175,6 +198,9 @@ if not trend_df.empty:
         title=f"Microplastic Levels {'for ' + selected_location if selected_location != '🌍 All Locations' else '(All Locations)'}",
         color_discrete_sequence=px.colors.qualitative.Vivid
     )
+    fig_micro.add_hline(y=threshold, line_dash="dash", line_color="red",
+                        annotation_text=f"Threshold: {threshold} ppm",
+                        annotation_position="bottom right")
     fig_micro.update_layout(template="plotly_white")
     st.plotly_chart(fig_micro, use_container_width=True)
 else:
